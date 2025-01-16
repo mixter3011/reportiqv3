@@ -4,9 +4,9 @@ from tkinter import ttk, messagebox
 from pathlib import Path
 from typing import List, Tuple
 import threading
-from utils.file_operations import browse_files, validate_file_type, simulate_upload
-from utils.data_processing import load_data, check_required_files, convert_excel_to_csv
-from utils.report_generation import create_portfolio_reports
+from utils.ops import browse_files, validate_file_type, simulate_upload
+from utils.processing import load_data, check_required_files, convert_excel_to_csv
+from utils.report import create_portfolio_reports
 
 class DragDropUploadUI:
     def __init__(self, root):

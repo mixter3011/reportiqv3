@@ -1,5 +1,6 @@
 import tkinter as tk
-from ui.drag_drop_ui import DragDropUploadUI
+from ui.ui import DragDropUploadUI
+
 
 def main():
     root = tk.Tk()

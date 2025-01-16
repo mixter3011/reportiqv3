@@ -1,3 +1,4 @@
+import datetime
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Rectangle
@@ -7,25 +8,75 @@ import numpy as np
 
 
 def plot_table_and_pie(df, Holding, xirr, cash_equivalent_value, cash_equivalent_percentage, equity_allocation_percentage):
-    fig = plt.figure(figsize=(16, 10))
-
-    fig.patches.extend([plt.Rectangle((0, 0.85), 1, 0.15, 
-                                      facecolor='lightblue', 
-                                      transform=fig.transFigure, 
-                                      figure=fig, alpha=0.3)])
-
-    gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])
+    Holding = Holding.dropna()
+    Holding = Holding.dropna(axis=1)
+    Holding = Holding.dropna(how='all')
     
-    ax_table = fig.add_subplot(gs[0])
-    ax_table.axis('tight')
-    ax_table.axis('off')
+    df_equity = Holding[Holding['Unnamed: 0'] == 'Equity']
+    df_debt = Holding[Holding['Unnamed: 0'] == 'Debt']
 
-    xirr_value = (
-        float(xirr['Remarks'].iloc[-1]) * 100 
-        if not xirr.empty and 'Remarks' in xirr.columns else "N/A"
+    df_equity.loc[:, 'Unnamed: 4'] = pd.to_numeric(df_equity['Unnamed: 4'], errors='coerce')
+    df_debt.loc[:, 'Unnamed: 4'] = pd.to_numeric(df_debt['Unnamed: 4'], errors='coerce')
+
+    equity_sum = df_equity['Unnamed: 4'].sum()
+    debt_sum = df_debt['Unnamed: 4'].sum()
+
+    equity_sum_in_lacs = equity_sum / 100000
+    debt_sum_in_lacs = debt_sum / 100000
+
+    df_equity.loc[:, 'Unnamed: 6'] = pd.to_numeric(df_equity['Unnamed: 6'], errors='coerce')
+    df_debt.loc[:, 'Unnamed: 6'] = pd.to_numeric(df_debt['Unnamed: 6'], errors='coerce')
+
+    equity_mkt_val = df_equity['Unnamed: 6'].sum()
+    debt_mkt_val = df_debt['Unnamed: 6'].sum()
+
+    equity_mkt_val_in_lacs = equity_mkt_val / 100000
+    debt_mkt_val_in_lacs = debt_mkt_val / 100000
+
+    total_investment = equity_sum_in_lacs + debt_sum_in_lacs
+    total_market_value = equity_mkt_val_in_lacs + debt_mkt_val_in_lacs
+
+    fig = plt.figure(figsize=(15.8, 10))
+    ax = fig.add_subplot(111)
+    
+    ax.set_position([0, 0, 1, 1])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+
+    gradient = np.linspace(1, 0.9, 500).reshape(1, -1)
+    ax.imshow(
+        gradient,
+        extent=(0, 1, 0, 1),
+        cmap='Blues',
+        aspect='auto',
+        alpha=0.3
     )
-    if isinstance(xirr_value, float):
-        xirr_value = f"{xirr_value:.2f}%"
+
+    try:
+        logo = plt.imread('logo.png')
+        header_img = plt.imread('header.png')
+        
+        logo_ax = fig.add_axes([0.79, 0.9, 0.2, 0.08])
+        logo_ax.imshow(logo)
+        logo_ax.axis('off')
+        
+        header_ax = fig.add_axes([0.02, 0.77, 0.9, 0.3])
+        header_ax.imshow(header_img)
+        header_ax.axis('off')
+    except:
+        print("Warning: One or more image files not found")
+
+    current_date = pd.Timestamp.now().strftime('%d-%b-%Y')
+    current_time = pd.Timestamp.now().strftime('%I:%M %p')
+    
+    ax.text(0.11, 0.915, "Holding Summary and Performance", 
+            fontsize=28, color='#CD0000',
+            weight='light')
+    
+    ax.text(0.56, 0.92, f"For Period (As On {current_date})",
+            fontsize=12, color='#000000',
+            weight='normal')
     
     client_info_raw = (
         Holding['Unnamed: 1'].iloc[1]
@@ -40,75 +91,122 @@ def plot_table_and_pie(df, Holding, xirr, cash_equivalent_value, cash_equivalent
         name = client_info_raw
         id_num = ""
 
-    fig.text(0.5, 0.94, name, fontsize=16, fontweight='bold', ha='center')
-    fig.text(0.5, 0.89, id_num, fontsize=16, fontweight='bold', ha='center')
+    asset_data = {
+        "Asset Class": [
+            "EQUITY", "MULTI ASSET", "DEBT", "ALTERNATE QUOTED", 
+            "CASH", "ALTERNATE UNQUOTED", "PORTFOLIO TOTAL"
+        ],
+        "% of Portfolio": [
+            round(equity_allocation_percentage, 2), "-", 
+            round(100 - equity_allocation_percentage, 2), "-", "-", "-", 100.00
+        ],
+        "Investment at Cost": [
+            round(equity_sum_in_lacs, 2), "-", round(debt_sum_in_lacs, 2), 
+            "-", "-", "-", round(total_investment, 2)
+        ],
+        "Market Value": [
+            round(equity_mkt_val_in_lacs, 2), "-", round(debt_mkt_val_in_lacs, 2), 
+            "-", "-", "-", round(total_market_value, 2)
+        ]
+    }
 
-    summary_data = [
-        ("Portfolio Value", df.iloc[-1]['Portfolio Value']),
-        ("Cash Equivalent", f"{cash_equivalent_value:,}"),
-        ("Cash Equivalent %", f"{cash_equivalent_percentage:.2f}%"),
-        ("Equity Allocation %", f"{equity_allocation_percentage:.2f}%"),
-        ("XIRR Value", xirr_value),
-    ]
-
-    y_pos = 0.75
-    line_height = 0.06
-    for label, value in summary_data:
-        ax_table.text(0.1, y_pos, f"{label}:", transform=fig.transFigure, fontweight='bold', fontsize=14, horizontalalignment='left')
-        ax_table.text(0.45, y_pos, str(value), transform=fig.transFigure, fontsize=14, horizontalalignment='right')
-        y_pos -= line_height
-
-    table_y_pos = y_pos - 0.05
-    table_data = df.values
-    table = ax_table.table(
-        cellText=table_data,
-        colLabels=["Portfolio Component", "Portfolio Value (Sum)"],
-        loc='center',
+    asset_df = pd.DataFrame(asset_data)
+    
+    ax.text(0.05, 0.85, "Investment Summary", 
+            fontsize=16, fontweight='bold', color='#000000')
+    ax.text(0.52, 0.85, "(Amount in Lacs)", 
+            fontsize=12, color='#666666')
+    
+    ax.add_patch(plt.Rectangle((0.035, 0.85), 0.004, 0.015,
+                              facecolor='#CD0000'))
+    
+    table_ax1 = fig.add_axes([0.05, 0.55, 0.55, 0.25])
+    table_ax1.axis('off')
+    
+    table1 = table_ax1.table(
+        cellText=asset_df.values,
+        colLabels=asset_df.columns,
         cellLoc='right',
-        colColours=["#E6E6FA", "#E6E6FA"],
-        bbox=[-0.06, table_y_pos - 0.19, 1.2, 0.24],
-        colWidths=[0.6, 0.4]
+        loc='center',
+        bbox=[0, 0, 1, 1],
+        colWidths=[0.3, 0.2, 0.25, 0.25]
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(14)
-    for (row, col), cell in table._cells.items():
-        cell.set_height(0.1)
-        cell.set_text_props(ha='left' if col == 0 else 'right')
-        cell.set_edgecolor('#D3D3D3')
-        cell.set_facecolor('white')
 
-    ax_pie = fig.add_subplot(gs[1])
-    fig.text(0.685, 0.76, "Portfolio Composition", fontsize=14, fontweight='bold', ha='center')
-    pie_data = []
-    pie_labels = []
+    table1.auto_set_font_size(False)
+    table1.set_fontsize(10)
 
-    for _, row in df.iterrows():
-        if row['Portfolio Component'] != "Grand Total":
-            try:
-                value = float(str(row['Portfolio Value']).replace(',', ''))
-                if value > 0:
-                    pie_data.append(value)
-                    pie_labels.append(row['Portfolio Component'])
-            except (ValueError, AttributeError):
-                continue
-
-    colors = ['#B7E3E4', '#B5D5A7', '#D9E1F2', '#FFE699']
-    wedges, texts, autotexts = ax_pie.pie(
-        pie_data,
-        labels=[''] * len(pie_data),
-        autopct='%1.0f%%',
-        startangle=90,
-        colors=colors,
-        pctdistance=0.75,
-        center=(0, -0.1),
+    for (row, col), cell in table1._cells.items():
+        cell.set_edgecolor('black')
+        
+        if col == 0:  
+            cell._loc = 'left' 
+        else:
+            cell._loc = 'right'  
+            
+        if row == 0:
+            cell.set_facecolor('#E6E6E6')
+            cell.set_text_props(weight='bold')
+        
+        if row == len(asset_df) and col > 0:
+            cell.set_facecolor('#E6F3FF')
+            
+        if row == len(asset_df):
+            cell.get_text().set_weight('bold')
+    
+    ax.text(0.05, 0.5, "Portfolio Snapshot", 
+            fontsize=16, fontweight='bold', color='#000000')
+    ax.text(0.52, 0.5, "(Amount in Lacs)", 
+            fontsize=12, color='#666666')
+    
+    ax.add_patch(plt.Rectangle((0.035, 0.5), 0.004, 0.015,
+                              facecolor='#CD0000'))
+    
+    table_ax2 = fig.add_axes([0.05, 0.20, 0.55, 0.25])
+    table_ax2.axis('off')
+    
+    table2 = table_ax2.table(
+        cellText=asset_df.values,
+        colLabels=asset_df.columns,
+        cellLoc='right',
+        loc='center',
+        bbox=[0, 0, 1, 1],
+        colWidths=[0.3, 0.2, 0.25, 0.25]
     )
-    plt.setp(autotexts, size=10, weight="bold", color='black')
-    ax_pie.legend(wedges, pie_labels, loc='center right', bbox_to_anchor=(1.3, 0.5))
-    centre_circle = plt.Circle((0, -0.1), 0.60, fc='white')
-    ax_pie.add_artist(centre_circle)
-    ax_pie.axis('equal')
 
-    plt.subplots_adjust(top=0.85, right=0.85, left=0.1, bottom=0.1)
+    table2.auto_set_font_size(False)
+    table2.set_fontsize(10)
+
+    for (row, col), cell in table2._cells.items():
+        cell.set_edgecolor('black')
+        
+        if col == 0:  
+            cell._loc = 'left'  
+        else:
+            cell._loc = 'right'  
+            
+        if row == 0:
+            cell.set_facecolor('#E6E6E6')
+            cell.set_text_props(weight='bold')
+        
+        if row == len(asset_df) and col > 0:
+            cell.set_facecolor('#E6F3FF')
+            
+        if row == len(asset_df):
+            cell.get_text().set_weight('bold')
+
+    footer_text = (
+        "This document is not valid without disclosure, Please refer to the last page for the disclaimer. | "
+        "Strictly Private & Confidential.\n"
+        f"Incase of any query / feedback on the report, please write to query@motilaloswal.com. | "
+        f"Generated Date & Time : {current_date} & {current_time}"
+    )
+    ax.text(
+        0.5, 0.02, footer_text,
+        horizontalalignment='center',
+        fontsize=10,
+        color='#2F4F4F',
+        wrap=True
+    )
 
     return fig
 

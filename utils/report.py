@@ -1,7 +1,9 @@
 from utils.plotting import (
     plot_table_and_pie,
-    plot_combined_table,
-    create_fno_table_and_graph,
+    create_holdings_summary,
+    create_portfolio_table,
+    eqmf,
+    analyze_fno_holdings,
 )
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
@@ -228,35 +230,6 @@ def preprocess_table(dataframe, category_name):
 
     return result_df, sums
 
-def calculate_unrealized_gains(Holding):
-    product_gains = {}
-    
-    equity_mask = Holding['Unnamed: 0'].str.contains('Equity:-', na=False)
-    if equity_mask.any():
-        equity_start = equity_mask.idxmax() + 2
-        equity_data = Holding.iloc[equity_start:].copy()
-        total_row = equity_data[equity_data['Unnamed: 0'] == 'Total:']
-        if not total_row.empty:
-            try:
-                equity_gain = float(total_row['Unnamed: 10'].iloc[0])
-                product_gains['Equity'] = equity_gain
-            except ValueError:
-                product_gains['Equity'] = 0.0
-
-    mf_mask = Holding['Unnamed: 0'].str.contains('Mutual Fund:-', na=False)
-    if mf_mask.any():
-        mf_start = mf_mask.idxmax() + 2
-        mf_data = Holding.iloc[mf_start:].copy()
-        mf_total_row = mf_data[mf_data['Unnamed: 0'] == 'Total:']
-        if not mf_total_row.empty:
-            try:
-                mf_gain = float(mf_total_row['Unnamed: 10'].iloc[0])
-                product_gains['Mutual Fund'] = mf_gain
-            except ValueError:
-                product_gains['Mutual Fund'] = 0.0
-
-    return product_gains
-
 def create_portfolio_reports(data, portfolio_dir):
     try:
         Portfolio_Value = data['Portfolio Value']
@@ -276,7 +249,6 @@ def create_portfolio_reports(data, portfolio_dir):
         portfolio_dir = Path(portfolio_dir)
         
         with PdfPages(portfolio_dir / 'portfolio_report.pdf') as pdf:
-            # Create cover page with extracted customer details
             create_cover_page(pdf, customer_name, ucid)
 
             fig1 = plot_table_and_pie(
@@ -290,70 +262,22 @@ def create_portfolio_reports(data, portfolio_dir):
             pdf.savefig(fig1, bbox_inches='tight')
             plt.close(fig1)
 
-            fig2, ax2 = plt.subplots(figsize=(18, 12))
-            direct_equity_df, de_sums = preprocess_table(
-                equity[equity['Category'] == 'Direct Equity'], "Direct Equity"
-            )
-            equity_etf_df, etf_sums = preprocess_table(
-                equity[equity['Category'] == 'Equity ETF'], "Equity ETF"
-            )
-            equity_mf_df, mf_sums = preprocess_table(
-                equity[equity['Category'] == 'Equity Mutual Fund'], "Equity Mutual Fund"
-            )
-            plot_combined_table(
-                [direct_equity_df, equity_etf_df, equity_mf_df],
-                [de_sums, etf_sums, mf_sums],
-                ax2,
-            )
+            fig2 = create_holdings_summary(equity, debt, Holding)
             pdf.savefig(fig2, bbox_inches='tight')
             plt.close(fig2)
-
-            fig3, ax3 = plt.subplots(figsize=(18, 12))
-            debt_mf, mf_sums = preprocess_table(
-                debt[debt['Category'] == 'Debt Mutual Fund'], "Debt Mutual Fund"
-            )
-            debt_etf, etf_sums = preprocess_table(
-                debt[debt['Category'] == 'Debt ETF'], "Debt ETF"
-            )
-            plot_combined_table([debt_etf, debt_mf], [etf_sums, mf_sums], ax3)
+            
+            fig3 = create_portfolio_table(Holding)
             pdf.savefig(fig3, bbox_inches='tight')
             plt.close(fig3)
-
-            fig4 = create_fno_table_and_graph(fno)
-            pdf.savefig(fig4, bbox_inches='tight')
-            plt.close(fig4)
-
-            fig5 = plt.figure(figsize=(12, 8))
-            profit_cleaned = profit.dropna().iloc[:-1]
-            table1 = plt.table(
-                cellText=profit_cleaned.values,
-                colLabels=profit_cleaned.columns,
-                cellLoc='center',
-                loc='center',
-            )
-            table1.auto_set_font_size(False)
-            table1.set_fontsize(9)
-            table1.scale(1.0, 1.5)
-            plt.title('Realised Gain', pad=10, size=14, weight='bold')
-            plt.axis('off')
+            
+            
+            fig5 = analyze_fno_holdings(Holding)
             pdf.savefig(fig5, bbox_inches='tight')
             plt.close(fig5)
 
-            fig6 = plt.figure(figsize=(8, 4))
-            product_gains = calculate_unrealized_gains(Holding)
-            colors = ['#B7E3E4', '#B5D5A7']
-            plt.pie(
-                product_gains.values(),
-                labels=product_gains.keys(),
-                autopct='%1.1f%%',
-                colors=colors,
-                startangle=90,
-            )
-            plt.title('Unrealized Gains Distribution', pad=20)
-            centre_circle = plt.Circle((0, 0), 0.70, fc='white')
-            fig6.gca().add_artist(centre_circle)
-            pdf.savefig(fig6, bbox_inches='tight')
-            plt.close(fig6)
+            fig4 = eqmf(Holding)
+            pdf.savefig(fig4, bbox_inches='tight')
+            plt.close(fig4)
             
             create_footer_page(pdf)
 

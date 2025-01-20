@@ -4,6 +4,7 @@ from utils.plotting import (
     create_portfolio_table,
     eqmf,
     analyze_fno_holdings,
+    dmf
 )
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
@@ -192,6 +193,277 @@ def create_footer_page(pdf):
     pdf.savefig(fig, bbox_inches=None, pad_inches=0)
     plt.close(fig)
 
+def create_benchmark_tables_page(pdf):
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111)
+    
+    ax.set_position([0, 0, 1, 1])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+
+    # Background gradient
+    gradient = np.linspace(1, 0.9, 500).reshape(1, -1)
+    ax.imshow(
+        gradient,
+        extent=(0, 1, 0, 1),
+        cmap='Blues',
+        aspect='auto',
+        alpha=0.3
+    )
+
+    # Logo
+    logo_img = plt.imread('logo.png')
+    logo_ax = fig.add_axes([0.79, 0.9, 0.2, 0.08])  
+    logo_ax.imshow(logo_img)
+    logo_ax.axis('off')
+    
+    ax.text(
+    0.11, 0.92, "List of Benchmarks used for comparison",
+    fontsize=32, color='#8B0000',
+    weight='light'
+    )
+    
+    # Header
+    footer = plt.imread('header.png')
+    footer_ax = fig.add_axes([0.02, 0.77, 0.9, 0.3])
+    footer_ax.imshow(footer)
+    footer_ax.axis('off')
+
+    # Define table data
+    indices_data = [
+        ['List of Indices', ''],
+        ['All Direct Equity / Stocks', 'Nifty 50'],
+        ['All Bonds', 'CRISIL Composite Bond Fund Index'],
+        ['All Structure Products', 'Crisil Short Term Bond Fund Index']
+    ]
+
+    mutual_fund_data = [
+        ['List of Mutual Fund Indices', ''],
+        ['Mutual Fund Categories', 'Benchmark'],
+        ['Equity Savings Fund', 'Nifty Equity Saving TRI'],
+        ['Thematic Fund', 'Nifty 500 TRI'],
+        ['Arbitrage Fund', 'Nifty 50 Arbitrage'],
+        ['Banking and PSU', 'CRISIL Short Term Bond Fund Index'],
+        ['Corporate Bond', 'Crisil Composite Bond Fund Index'],
+        ['Credit Risk', 'Crisil Short Term Bond Fund Index'],
+        ['Debt Hybrid Fund', 'Crisil Short Term Bond Fund Index'],
+        ['Dynamic Bond Fund', 'Crisil Composite Bond Fund Index'],
+        ['ELSS', 'Nifty 500 TRI'],
+        ['Equity Hybrid Fund', 'CRISIL Hybrid 35+65 - Aggressive Index'],
+        ['Fixed Maturity Fund', 'Crisil Short Term Bond Fund Index'],
+        ['Flexi Cap Fund', 'Nifty 500 TRI'],
+        ['Floating Rate Fund', 'Crisil Short Term Bond Fund Index'],
+        ['GILT Fund', 'CRISIL GILT Index'],
+        ['GOLD FUND', 'MCX GOLD SPOT'],
+        ['Income Fund', 'Crisil Composite Bond Fund Index'],
+        ['International Fund', 'S&P 500 INR'],
+        ['Large Cap Fund', 'Nifty 50 TRI'],
+        ['Liquid Fund', 'Crisil Liquid Fund Index'],
+        ['Long Duration', 'Crisil Composite Bond Fund Index'],
+        ['Low Duration', 'Crisil Liquid Fund Index'],
+        ['Medium Duration', 'Crisil Composite Bond Fund Index'],
+        ['Medium to Long Duration', 'Crisil Composite Bond Fund Index'],
+        ['Mid Cap Fund', 'Nifty Midcap 150 TRI'],
+        ['Multi Cap Fund', 'Nifty 500 TRI'],
+        ['Overnight', 'Crisil Liquid Fund Index'],
+        ['Short Duration', 'Crisil Short Term Bond Fund Index'],
+        ['Silver Fund', 'MCX Silver SPOT'],
+        ['Small Cap Fund', 'Nifty Smallcap 250 TRI'],
+        ['Target Maturity Fund', 'Crisil Composite Bond Fund Index'],
+        ['Thematic Fund', 'Nifty 500 TRI'],
+        ['Ultra Short Duration Fund', 'Crisil Liquid Fund Index'],
+    ]
+
+    pms_data = [
+        ['List of PMS / AIF Indices', ''],
+        ['Schemes', 'Benchmark'],
+        ['Ashmore India Opportunities Fund Class B', 'BSE Small Cap'],
+        ['ASK Growth Portfolio', 'S&P BSE 500'],
+        ['Ask India Vision Portfolio', 'S&P BSE 500'],
+        ['ASK India Select Portfolio', 'S&P BSE 500'],
+        ['ASK Indian Entrepreneur Portfolio', 'S&P BSE 500'],
+        ['Avendus Absolute Return Fund', 'Crisil Short Term Bond Fund Index'],
+        ['Avendus Enhanced Return Fund', 'Nifty 50'],
+        ['DHFL Pramerica Deep Value Strategy', 'Nifty 500'],
+        ['Edelweiss Stressed Troubled Assets Revival Fund Estar', 'Nifty 50'],
+        ['India Invest Opportunity -Citi Bank', 'Nifty 50'],
+        ['India Opportunities Portfolio Strategy', 'S&P BSE 500'],
+        ['India Opportunity Portfolio Strategy V2', 'Nifty Free Float Smallcap 100'],
+        ['Invesco India Dawn Portfolio', 'S&P BSE 500'],
+        ['Invesco India Rise Portfolio', 'S&P BSE 500'],
+        ['Liquid Strategy', 'CRISIL Liquid Fund Index'],
+        ['Motilal Oswal Focused Emergence Fund', 'BSE Small Cap'],
+        ['Motilal Oswal Focused Multicap Opportunities Fund', 'Nifty 500'],
+        ['Next Trillion Dollar Opportunity Strategy', 'S&P BSE 500'],
+        ['OBCMPL All Cap Strategy', 'S&P BSE 500'],
+        ['OBCMPL Thematic Portfolio', 'Nifty 50'],
+        ['Old Bridge Nri Vantage Equity Plan', 'S&P BSE 500'],
+        ['Old Bridge Vantage Equity Fund', 'S&P BSE 500'],
+        ['Reliance Yield Maximiser All Schemes', 'Crisil Liquid Fund Index + 2%'],
+        ['Renaissance India Next Portfolio', 'Nifty 50'],
+        ['UTI Structured Debt Opportunities Fund I', 'Crisil Short Term Bond Fund Index'],
+        ['Value Strategy', 'Nifty 50'],
+        ['Unifi Blend Fund', 'S&P BSE Midcap'],
+        ['WO Pioneers PMS', 'S&P BSE 200']
+    ]
+
+    # Create tables
+    # Left side tables
+    indices_table = ax.table(
+        cellText=indices_data,
+        loc='upper left',
+        bbox=[0.05, 0.78, 0.3, 0.1],
+        cellLoc='left'
+    )
+    indices_table.auto_set_font_size(False)
+    indices_table.set_fontsize(8)
+    
+    mutual_fund_table = ax.table(
+        cellText=mutual_fund_data,
+        loc='upper left',
+        bbox=[0.05, 0.06, 0.4, 0.7],
+        cellLoc='left'
+    )
+    mutual_fund_table.auto_set_font_size(False)
+    mutual_fund_table.set_fontsize(8)
+
+    pms_table = ax.table(
+        cellText=pms_data,
+        loc='upper right',
+        bbox=[0.55, 0.06, 0.4, 0.8],
+        cellLoc='left'
+    )
+    pms_table.auto_set_font_size(False)
+    pms_table.set_fontsize(8)
+
+    for table in [indices_table, mutual_fund_table, pms_table]:
+        for cell in table._cells:
+            table._cells[cell].set_linewidth(0.5)
+            # Header styling
+            if cell[0] == 0 or (cell[0] == 1 and table != indices_table):
+                table._cells[cell].set_facecolor('#D3D3D3')
+                table._cells[cell].set_text_props(weight='bold')
+
+    current_date = pd.Timestamp.now().strftime('%d-%b-%Y')
+    footer_text = (
+        "This document is not valid without disclosure, please refer to the last page for the disclaimer. | "
+        "Strictly Private & Confidential.\n"
+        f"Incase of any query / feedback on the report, please write to query@motilaloswal.com. | "
+        f"Generated Date & Time : {current_date} | {pd.Timestamp.now().strftime('%I:%M %p')}"
+    )
+    ax.text(
+        0.5, 0.02, footer_text,
+        horizontalalignment='center',
+        fontsize=10,
+        color='#2F4F4F',
+        wrap=True
+    )
+
+    pdf.savefig(fig, bbox_inches=None, pad_inches=0)
+    plt.close(fig)
+    
+def create_benchmark_tables_page2(pdf):
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(111)
+    
+    ax.set_position([0, 0, 1, 1])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+
+    gradient = np.linspace(1, 0.9, 500).reshape(1, -1)
+    ax.imshow(
+        gradient,
+        extent=(0, 1, 0, 1),
+        cmap='Blues',
+        aspect='auto',
+        alpha=0.3
+    )
+
+    logo_img = plt.imread('logo.png')
+    logo_ax = fig.add_axes([0.79, 0.9, 0.2, 0.08])  
+    logo_ax.imshow(logo_img)
+    logo_ax.axis('off')
+    
+    ax.text(
+    0.11, 0.92, "List of Benchmarks used for comparison",
+    fontsize=32, color='#8B0000',
+    weight='light'
+    )
+    
+    footer = plt.imread('header.png')
+    footer_ax = fig.add_axes([0.02, 0.77, 0.9, 0.3])
+    footer_ax.imshow(footer)
+    footer_ax.axis('off')
+
+    pms_data = [
+        ['List of PMS / AIF Indices', ''],
+        ['Schemes', 'Benchmark'],
+        ['Unifi Blend PMS', 'S&P BSE 500'],
+        ['Motilal Oswal Value PMS', 'Nifty 50 TRI'],
+        ['Motilal Oswal NTDOC PMS', 'Nifty 500'],
+        ['ASK India Select PMS', 'S&P BSE 500'],
+        ['ASk IEP PMS', 'S&P BSE 500'],
+        ['ASK India Vision', 'S&P BSE 500'],
+        ['ASK Indian Entrepreneur Portfolio', 'S&P BSE 500'],
+        ['Abakkus All Cap', 'S&P  BSE 200'],
+        ['ENAM IDEA', 'Nifty 500'],
+        ['Motilal Oswal BOP PMS', 'Nifty 50 TRI'],
+        ['Marcellus CC PMS', 'Nifty 50'],
+        ['Renaissance Oppurtunities PMS', 'Nifty 50'],
+        ['Renaissance India Next Portfolio', 'Nifty 50'],
+        ['Invesco India DAWN', 'S&P BSE 500'],
+        ['Invesco India RISE', 'S&P BSE 500'],
+        ['ASK India 2025', 'S&P BSE 500'],
+        ['Renaissance Midcap', 'Nifty Free Float Midcap 100'],
+        ['Unifi Blended PMS', 'S&P BSE Midcap'],
+        ['Unifi BCAD PMS', 'S&P BSE Midcap'],
+        ['Unifi Blend AIF', 'S&P BSE Midcap'],
+        ['Motilal Oswal IOP PMS', 'Nifty Small Cap 50 Tri'],
+        ['MO EOP 2', 'Nifty 500'],
+        ['Marcellus Little Champs', 'S&P BSE 500'],
+        ['Old Bridge Long Term Equility', 'Nifty 50'],
+        ['Alchemy High Growth Select Stock', 'S&P BSE 500'],
+        ['Alchemy High Growth', 'S&P BSE 500'],
+        ['MO BAF 2(Anti Fragile)', 'Nifty 500'],
+    ]
+    
+    pms_table = ax.table(
+        cellText=pms_data,
+        loc='upper right',
+        bbox=[0.25, 0.06, 0.4, 0.8],
+        cellLoc='left'
+    )
+    pms_table.auto_set_font_size(False)
+    pms_table.set_fontsize(8)
+
+    for table in [pms_table]:
+        for cell in table._cells:
+            table._cells[cell].set_linewidth(0.5)
+            if cell[0] == 0 or (cell[0] == 1 and table != pms_table):
+                table._cells[cell].set_facecolor('#D3D3D3')
+                table._cells[cell].set_text_props(weight='bold')
+
+    
+    current_date = pd.Timestamp.now().strftime('%d-%b-%Y')
+    footer_text = (
+        "This document is not valid without disclosure, please refer to the last page for the disclaimer. | "
+        "Strictly Private & Confidential.\n"
+        f"Incase of any query / feedback on the report, please write to query@motilaloswal.com. | "
+        f"Generated Date & Time : {current_date} | {pd.Timestamp.now().strftime('%I:%M %p')}"
+    )
+    ax.text(
+        0.5, 0.02, footer_text,
+        horizontalalignment='center',
+        fontsize=10,
+        color='#2F4F4F',
+        wrap=True
+    )
+
+    pdf.savefig(fig, bbox_inches=None, pad_inches=0)
+    plt.close(fig)
+
 def rearrange_and_add_total(df):
     df["Portfolio Value"] = pd.to_numeric(df["Portfolio Value"], errors='coerce')
     df["Portfolio Value"] = df["Portfolio Value"].round().astype(int)
@@ -279,6 +551,12 @@ def create_portfolio_reports(data, portfolio_dir):
             pdf.savefig(fig4, bbox_inches='tight')
             plt.close(fig4)
             
+            fig6 = dmf(Holding)
+            pdf.savefig(fig6, bbox_inches='tight')
+            plt.close(fig6)
+            
+            create_benchmark_tables_page(pdf)
+            create_benchmark_tables_page2(pdf)
             create_footer_page(pdf)
 
     except Exception as e:

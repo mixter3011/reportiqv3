@@ -1,21 +1,8 @@
-import datetime
-import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-from matplotlib.patches import Rectangle
-from typing import List, Dict
-import pandas as pd
 import numpy as np
-
-
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
-def plot_table_and_pie(df, Holding, xirr, cash_equivalent_value, cash_equivalent_percentage, equity_allocation_percentage):
+def plot_table_and_pie(Holding, equity_allocation_percentage):
     Holding = Holding.dropna()
     Holding = Holding.dropna(axis=1)
     Holding = Holding.dropna(how='all')
@@ -597,45 +584,14 @@ def analyze_fno_holdings(df):
     return fig
 
 def eqmf(df):
-    target_stocks = [
-        "DSP ELSS Tax Saver-G",
-        "HDFC Small Cap",
-        "ICICI Pru Equity & Debt-G",
-        "ICICI Pru FMCG-G",
-        "Nippon India Small Cap-G",
-        "Nippon India Large Cap-G",
-        "SBI Banking & Financial Services",
-        "Tata Digital India",
-        "Quant Dynamic Asset Allocation"
-    ]
+    eq_strt = df[df.iloc[:, 0] == 'Mutual Fund:-'].index[0]
+    eq_end = df[df.iloc[:, 0] == 'FnO:-'].index[0]
     
-    equity_data = []
-    equity_section = False
-    for idx, row in df.iterrows():
-        if isinstance(row['Unnamed: 0'], str) and 'Equity' in row['Unnamed: 0']:
-            equity_section = True
-            continue
-        if equity_section and isinstance(row['Unnamed: 0'], str) and any(stock in row['Unnamed: 0'] for stock in target_stocks):
-            equity_data.append(row.tolist())
-        if equity_section and isinstance(row['Unnamed: 0'], str) and 'Total' in row['Unnamed: 0']:
-            equity_section = False
-    
-    cols = [
-        "Instrument Name", "Quantity", "Purchase Price", "Purchase Value",
-        "Market Price", "Market Value", "ST Qty", "ST G/L", "LT Qty", "LT G/L",
-        "Unrealised Gain/Loss", "Unrealised Gain/Loss %", "ISIN", "Unused_1", "Unused_2"
-    ]
-    equity = pd.DataFrame(equity_data, columns=df.columns)
-    equity.columns = cols
-    
-    if target_stocks:
-        equity = equity[equity["Instrument Name"].isin(target_stocks)]
-    
-    display_cols = [
-        "Instrument Name", "Quantity", "Purchase Price", "Purchase Value",
-        "Market Price", "Market Value", "Unrealised Gain/Loss",
-        "Unrealised Gain/Loss %", "ISIN"
-    ]
+    eq_data = df.iloc[eq_strt+1:eq_end-4].copy()
+    eq_data.columns = eq_data.iloc[0]
+    eq_data = eq_data.iloc[1:]
+    eq_data = eq_data.reset_index(drop=True)
+    eq_data = eq_data[~eq_data['Asset Type'].isin(['Debt']) & ~eq_data['Asset Type'].isna()]
     
     fig = plt.figure(figsize=(15.8, 10))
     ax = fig.add_subplot(111)
@@ -649,7 +605,7 @@ def eqmf(df):
     
     current_date = pd.Timestamp.now().strftime('%d-%b-%Y')
     current_time = pd.Timestamp.now().strftime('%I:%M %p')
-    
+
     ax.text(0.11, 0.915, 'Detailed Holdings and Performance', 
             color='#CD0000', fontsize=28, fontweight='light')
     ax.text(0.56, 0.92, f"For Period (As On {current_date})",
@@ -657,7 +613,7 @@ def eqmf(df):
     
     ax.text(0.05, 0.77, "Equity - ", 
             fontsize=16, fontweight='bold', color='#CD0000')
-    ax.text(0.12, 0.77, "Direct Equity", 
+    ax.text(0.12, 0.77, "Mutual Fund", 
             fontsize=16, fontweight='light', color='#666666')
     ax.text(0.83, 0.77, "(Amount in Lacs)", 
             fontsize=12, color='#666666')
@@ -676,15 +632,20 @@ def eqmf(df):
         header_ax.axis('off')
     except Exception as e:
         print(f"Warning: Image loading error: {e}")
+        
     
-    table_data = equity[display_cols].values.tolist()
-    
+    columns = [
+        'Scheme Name', 'Units', 'Purchase NAV', 'Purchase Value', 'Current NAV',
+        'Market Value', 'ST Qty', 'ST G/L', 'LT Qty', 'LT G/L', 'Dividend','Unrealised GainLoss',
+        'Unrealised GainLoss Per'
+    ]        
+
     table_ax = fig.add_axes([0.03, 0.25, 0.94, 0.5])
     table_ax.axis('off')
     
     table = table_ax.table(
-        cellText=table_data,
-        colLabels=display_cols,
+        cellText=eq_data[columns].values,
+        colLabels=columns,
         cellLoc='center',
         loc='center',
         bbox=[0, 0, 1, 1]
@@ -693,7 +654,7 @@ def eqmf(df):
     table.auto_set_font_size(False)
     table.set_fontsize(10)
     
-    col_widths = [0.25] + [0.09375] * (len(display_cols) - 1)
+    col_widths = [0.25] + [0.09375] * (len(columns) - 1)
     for i, width in enumerate(col_widths):
         table.auto_set_column_width([i])
     
@@ -707,7 +668,7 @@ def eqmf(df):
         if col == 0 and row != 0:
             cell._loc = 'left'
             
-        if row > 0 and col in [6, 7]:  
+        if row > 0 and col in [7, 8]:  
             text = cell.get_text().get_text()
             if text.startswith('(') or (text.replace('.','').replace('-','').isdigit() and float(text) < 0):
                 cell.get_text().set_color('red')
@@ -727,4 +688,108 @@ def eqmf(df):
     
     return fig
 
+def dmf(df):
+    d_strt = df[df.iloc[:, 0] == 'Mutual Fund:-'].index[0]
+    d_end = df[df.iloc[:, 0] == 'FnO:-'].index[0]
+    
+    d_data = df.iloc[d_strt+1:d_end-4].copy()
+    d_data.columns = d_data.iloc[0]
+    d_data = d_data.iloc[1:]
+    d_data = d_data.reset_index(drop=True)
+    d_data = d_data[~d_data['Asset Type'].isin(['Equity']) & ~d_data['Asset Type'].isna()]
+    
+    fig = plt.figure(figsize=(15.8, 10))
+    ax = fig.add_subplot(111)
+    ax.set_position([0, 0, 1, 1])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+    
+    gradient = np.linspace(1, 0.9, 500).reshape(1, -1)
+    ax.imshow(gradient, extent=(0, 1, 0, 1), cmap='Blues', aspect='auto', alpha=0.3)
+    
+    current_date = pd.Timestamp.now().strftime('%d-%b-%Y')
+    current_time = pd.Timestamp.now().strftime('%I:%M %p')
 
+    ax.text(0.11, 0.915, 'Detailed Holdings and Performance', 
+            color='#CD0000', fontsize=28, fontweight='light')
+    ax.text(0.56, 0.92, f"For Period (As On {current_date})",
+            fontsize=12, color='#000000', weight='normal')
+    
+    ax.text(0.05, 0.77, "Debt - ", 
+            fontsize=16, fontweight='bold', color='#CD0000')
+    ax.text(0.12, 0.77, "Mutual Fund", 
+            fontsize=16, fontweight='light', color='#666666')
+    ax.text(0.83, 0.77, "(Amount in Lacs)", 
+            fontsize=12, color='#666666')
+    ax.add_patch(plt.Rectangle((0.035, 0.77), 0.004, 0.015,
+                              facecolor='#CD0000'))
+    
+    try:
+        logo = plt.imread('logo.png')
+        logo_ax = fig.add_axes([0.79, 0.9, 0.2, 0.08])
+        logo_ax.imshow(logo)
+        logo_ax.axis('off')
+            
+        header = plt.imread('header.png')
+        header_ax = fig.add_axes([0.02, 0.77, 0.9, 0.3])
+        header_ax.imshow(header)
+        header_ax.axis('off')
+    except Exception as e:
+        print(f"Warning: Image loading error: {e}")
+        
+    
+    columns = [
+        'Scheme Name', 'Units', 'Purchase NAV', 'Purchase Value', 'Current NAV',
+        'Market Value', 'ST Qty', 'ST G/L', 'LT Qty', 'LT G/L', 'Dividend','Unrealised GainLoss',
+        'Unrealised GainLoss Per'
+    ]        
+
+    table_ax = fig.add_axes([0.03, 0.25, 0.94, 0.5])
+    table_ax.axis('off')
+    
+    table = table_ax.table(
+        cellText=d_data[columns].values,
+        colLabels=columns,
+        cellLoc='center',
+        loc='center',
+        bbox=[0, 0, 1, 1]
+    )
+    
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    
+    col_widths = [0.25] + [0.09375] * (len(columns) - 1)
+    for i, width in enumerate(col_widths):
+        table.auto_set_column_width([i])
+    
+    for (row, col), cell in table._cells.items():
+        cell.set_edgecolor('black')
+        
+        if row == 0:
+            cell.set_facecolor('#E6E6E6')
+            cell.set_text_props(weight='bold')
+        
+        if col == 0 and row != 0:
+            cell._loc = 'left'
+            
+        if row > 0 and col in [7, 8]:  
+            text = cell.get_text().get_text()
+            if text.startswith('(') or (text.replace('.','').replace('-','').isdigit() and float(text) < 0):
+                cell.get_text().set_color('red')
+    
+    footer_text = (
+        "This document is not valid without disclosure, Please refer to the last page for the disclaimer. | "
+        "Strictly Private & Confidential.\n"
+        f"Incase of any query / feedback on the report, please write to query@motilaloswal.com. | "
+        f"Generated Date & Time : {current_date} & {current_time}"
+    )
+    
+    ax.text(0.5, 0.02, footer_text,
+            horizontalalignment='center',
+            fontsize=10,
+            color='#2F4F4F',
+            wrap=True)
+    
+    return fig
+    

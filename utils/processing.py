@@ -1,61 +1,60 @@
 import pandas as pd
-import os
 from pathlib import Path
 from tkinter import messagebox
 from typing import List, Tuple
 
-def load_data(files_to_upload: List[Tuple[str, int, str]], required_files: List[str], output_dir: Path) -> dict:
+def ld_data(files: List[Tuple[str, int, str]], req: List[str], out: Path) -> dict:
     data = {}
-    for file_name in required_files:
-        file_path = None
+    for fname in req:
+        fpath = None
         
-        for name, _, path in files_to_upload:
-            if name == file_name:
-                file_path = path
+        for n, _, p in files:
+            if n == fname:
+                fpath = p
                 break
         
-        if not file_path:
-            converted_path = output_dir / file_name
-            if converted_path.exists():
-                file_path = converted_path
+        if not fpath:
+            conv_p = out / fname
+            if conv_p.exists():
+                fpath = conv_p
         
-        if file_path:
+        if fpath:
             try:
-                data[file_name.replace('.csv', '')] = pd.read_csv(file_path)
+                data[fname.replace('.csv', '')] = pd.read_csv(fpath)
             except Exception as e:
-                messagebox.showerror("Error", f"Could not load {file_name}: {str(e)}")
+                messagebox.showerror("Error", f"Could not load {fname}: {str(e)}")
                 return None
         else:
-            messagebox.showerror("Error", f"Missing required file: {file_name}")
+            messagebox.showerror("Error", f"Missing required file: {fname}")
             return None
     
     return data
 
-def convert_excel_to_csv(file_path: str, output_dir: Path) -> List[str]:
+def xl_to_csv(fp: str, out: Path) -> List[str]:
     try:
-        excel_data = pd.ExcelFile(file_path, engine="openpyxl")
-        converted_files = []
+        xl = pd.ExcelFile(fp, engine="openpyxl")
+        cvt = []
         
-        for sheet_name in excel_data.sheet_names:
-            df = excel_data.parse(sheet_name)
-            csv_file_name = output_dir / f"{sheet_name}.csv"
-            df.to_csv(csv_file_name, index=False)
-            converted_files.append(csv_file_name.name)
+        for sht in xl.sheet_names:
+            df = xl.parse(sht)
+            csv_name = out / f"{sht}.csv"
+            df.to_csv(csv_name, index=False)
+            cvt.append(csv_name.name)
         
-        return converted_files
+        return cvt
     except Exception as e:
-        raise Exception(f"Error converting {file_path} to CSV: {str(e)}")
+        raise Exception(f"Error converting {fp} to CSV: {str(e)}")
 
-def check_required_files(files_to_upload: List[Tuple[str, int, str]], required_files: List[str], output_dir: Path) -> bool:
-    existing_files = {name for name, _, _ in files_to_upload}
-    if output_dir.exists():
-        existing_files.update(f.name for f in output_dir.glob('*.csv'))
+def chk_files(files: List[Tuple[str, int, str]], req: List[str], out: Path) -> bool:
+    exist = {n for n, _, _ in files}
+    if out.exists():
+        exist.update(f.name for f in out.glob('*.csv'))
     
-    missing_files = set(required_files) - existing_files
-    if missing_files:
+    miss = set(req) - exist
+    if miss:
         messagebox.showerror(
             "Missing Files",
-            f"The following required files are missing:\n{', '.join(missing_files)}"
+            f"The following required files are missing:\n{', '.join(miss)}"
         )
         return False
     

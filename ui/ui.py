@@ -4,14 +4,14 @@ from tkinter import ttk, messagebox
 from pathlib import Path
 from typing import List, Tuple
 import threading
-from utils.ops import browse_files, validate_file_type, simulate_upload
-from utils.processing import load_data, check_required_files, convert_excel_to_csv
+from utils.ops import brw_files, val_file, sim_up
+from utils.processing import ld_data, chk_files, xl_to_csv
 from utils.report import create_portfolio_reports
 
 class DragDropUploadUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Portfolio Analysis Tool")
+        self.root.title("ReportIQ")
         self.root.geometry("600x400")
         self.accepted_types = {
             'Excel files': ('*.xlsx', '*.xls', '*.xlsm'),
@@ -97,7 +97,7 @@ class DragDropUploadUI:
         self.generate_btn.pack(side=tk.LEFT, padx=5)
 
     def browse_files(self):
-        files = browse_files(self.root, self.accepted_types)
+        files = brw_files(self.root, self.accepted_types)
         if files:
             self.add_files(files)
 
@@ -107,7 +107,7 @@ class DragDropUploadUI:
                 messagebox.showwarning("Limit Reached", "Maximum 7 files can be uploaded at once.")
                 break
                 
-            if not validate_file_type(file):
+            if not val_file(file):
                 messagebox.showerror("Invalid File", f"File type not supported: {file}")
                 continue
                 
@@ -145,7 +145,7 @@ class DragDropUploadUI:
             self.files_to_upload.append((filename, size, file))
             self.update_counter()
             
-            simulate_upload(progress, self.root)
+            sim_up(progress, self.root)
         
         button_state = 'normal' if self.files_to_upload else 'disabled'
         self.convert_btn['state'] = button_state
@@ -174,7 +174,7 @@ class DragDropUploadUI:
             for filename, _, file_path in self.files_to_upload:
                 try:
                     if file_path.lower().endswith(('.xlsx', '.xls', '.xlsm')):
-                        converted = convert_excel_to_csv(file_path, self.output_dir)
+                        converted = xl_to_csv(file_path, self.output_dir)
                         converted_files.extend(converted)
                     else:
                         output_path = self.output_dir / filename
@@ -193,7 +193,7 @@ class DragDropUploadUI:
         thread.start()
 
     def generate_files(self):
-        if not check_required_files(self.files_to_upload, self.required_files, self.output_dir):
+        if not chk_files(self.files_to_upload, self.required_files, self.output_dir):
             return
 
         self.generate_btn['state'] = 'disabled'
@@ -213,7 +213,7 @@ class DragDropUploadUI:
 
         def generation_thread():
             try:
-                data = load_data(self.files_to_upload, self.required_files, self.output_dir)
+                data = ld_data(self.files_to_upload, self.required_files, self.output_dir)
                 if not data:
                     progress_window.destroy()
                     return

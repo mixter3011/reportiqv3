@@ -3,42 +3,41 @@ import time
 import os
 from tkinter import filedialog
 
-def browse_files(root, accepted_types):
-    filetypes = [(name, ' '.join(extensions)) for name, extensions in accepted_types.items()]
-    filetypes.append(('All accepted files', ' '.join(sum(accepted_types.values(), ()))))
-    return filedialog.askopenfilenames(parent=root, title="Select Files", filetypes=filetypes)
+def brw_files(rt, acc_types):
+    ftypes = [(n, ' '.join(ext)) for n, ext in acc_types.items()]
+    ftypes.append(('All files', ' '.join(sum(acc_types.values(), ()))))
+    return filedialog.askopenfilenames(parent=rt, title="Select", filetypes=ftypes)
 
-def validate_file_type(filename: str) -> bool:
-    ext = os.path.splitext(filename.lower())[1]
-    allowed_extensions = ('.xlsx', '.xls', '.xlsm', '.csv')
-    return ext in allowed_extensions
+def val_file(fn: str) -> bool:
+    ext = os.path.splitext(fn.lower())[1]
+    exts = ('.xlsx', '.xls', '.xlsm', '.csv')
+    return ext in exts
 
-def simulate_upload(progress_bar, root):
-
-    def update_progress():
+def sim_up(pb, rt):
+    def upd_prog():
         for i in range(101):
-            progress_bar['value'] = i
+            pb['value'] = i
             time.sleep(0.05)
-            root.update()
+            rt.update()
 
-    thread = threading.Thread(target=update_progress)
-    thread.start()
+    t = threading.Thread(target=upd_prog)
+    t.start()
 
-def create_directory(path: str) -> None:
-    os.makedirs(path, exist_ok=True)
+def mk_dir(p: str) -> None:
+    os.makedirs(p, exist_ok=True)
 
-def get_file_size(filepath: str) -> float:
-    return os.path.getsize(filepath) / (1024 * 1024)
+def get_sz(fp: str) -> float:
+    return os.path.getsize(fp) / (1024 * 1024)
 
-def delete_file(filepath: str) -> None:
-    if os.path.exists(filepath):
-        os.remove(filepath)
+def del_f(fp: str) -> None:
+    if os.path.exists(fp):
+        os.remove(fp)
 
-def list_files_in_directory(directory: str, extensions: tuple = ()) -> list:
-    if not os.path.exists(directory):
+def lst_dir(d: str, exts: tuple = ()) -> list:
+    if not os.path.exists(d):
         return []
     return [
-        os.path.join(directory, file)
-        for file in os.listdir(directory)
-        if file.endswith(extensions)
+        os.path.join(d, f)
+        for f in os.listdir(d)
+        if f.endswith(exts)
     ]
